@@ -21,7 +21,8 @@ import {
   Tabs,
   Tab,
   CircularProgress,
-  InputAdornment
+  InputAdornment,
+  TablePagination
 } from "@mui/material";
 
 import CloseIcon from "@mui/icons-material/Close";
@@ -62,6 +63,10 @@ export default function AdminDashboard() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiAdvice, setAiAdvice] = useState("");
   const [naturalQuery, setNaturalQuery] = useState("");
+
+  // Pagination States
+  const [page, setPage] = useState(0);
+  const rowsPerPage = 10;
 
   const [form, setForm] = useState({
     title: "",
@@ -139,6 +144,7 @@ export default function AdminDashboard() {
       const res = await axios.post("/ai/search-parse", { text: naturalQuery });
       const tasksRes = await axios.get("/tasks", { params: res.data.query });
       setTasks(tasksRes.data.data || tasksRes.data);
+      setPage(0); // Reset to first page on search
       setSnackbar({ open: true, message: "AI filtered your tasks!" });
     } catch (err) {
       setSnackbar({ open: true, message: "AI Search failed to parse query" });
@@ -153,6 +159,8 @@ export default function AdminDashboard() {
     const matchesPriority = priorityFilter === "all" || task.priority === priorityFilter;
     return matchesSearch && matchesStatus && matchesPriority;
   });
+
+  const paginatedTasks = filteredTasks.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   const filteredUsers = users.filter((user) => 
     user.name.toLowerCase().includes(userSearchTerm.toLowerCase()) || 
@@ -173,6 +181,7 @@ export default function AdminDashboard() {
       assignedTo: "",
     });
     await fetchDashboard();
+    await fetchTasks();
   };
 
   const handleDeleteClick = (task) => {
@@ -233,6 +242,10 @@ export default function AdminDashboard() {
     setSnackbar({ open: true, message: "User updated successfully" });
     await fetchUsers();
     await fetchDashboard();
+  };
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
   };
 
   useEffect(() => {
@@ -312,102 +325,86 @@ export default function AdminDashboard() {
 
         {tabValue === 0 && (
           <>
-            <Grid container spacing={2} mb={3} alignItems="center">
-              <Grid item xs={12} sm="auto">
-                <Button variant="contained" fullWidth onClick={() => setOpen(true)} sx={{ height: 40, whiteSpace: 'nowrap' }}>
+            <Grid container spacing={1} mb={3} alignItems="center">
+              <Grid item>
+                <Button variant="contained" size="small" onClick={() => setOpen(true)} sx={{ height: 42, px: 2, whiteSpace: 'nowrap', fontSize: '0.8rem' }}>
                   Create Task
                 </Button>
               </Grid>
-              <Grid item xs={12} sm="auto">
+              <Grid item>
                 <TextField
-                  placeholder="Search by title..."
+                  placeholder="Search title..."
                   size="small"
-                  fullWidth
-                  sx={{ width: { sm: 200 } }}
+                  sx={{ width: 150 }}
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
                   InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      {searchTerm ? (
-                        <IconButton
-                          size="small"
-                          onClick={() => setSearchTerm("")}
-                          sx={{ visibility: "visible" }}
-                        >
-                          <CloseIcon fontSize="small" />
-                        </IconButton>
-                      ) : null}
-                    </InputAdornment>
-                  ),
-                }}
-              />
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        {searchTerm ? (
+                          <IconButton size="small" onClick={() => setSearchTerm("")}>
+                            <CloseIcon fontSize="small" />
+                          </IconButton>
+                        ) : null}
+                      </InputAdornment>
+                    ),
+                  }}
+                />
               </Grid>
-              <Grid item xs={6} sm="auto">
-                <TextField
-                  select
-                  label="Status"
-                  size="small"
-                  fullWidth
-                  sx={{ width: { sm: 130 } }}
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <MenuItem value="all">All Status</MenuItem>
+              <Grid item>
+                <TextField select label="Status" size="small" sx={{ width: 110 }} value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}>
+                  <MenuItem value="all">All</MenuItem>
                   <MenuItem value="pending">Pending</MenuItem>
                   <MenuItem value="in-progress">In Progress</MenuItem>
                   <MenuItem value="completed">Completed</MenuItem>
                 </TextField>
               </Grid>
-              <Grid item xs={6} sm="auto">
-                <TextField
-                  select
-                  label="Priority"
-                  size="small"
-                  fullWidth
-                  sx={{ width: { sm: 130 } }}
-                  value={priorityFilter}
-                  onChange={(e) => setPriorityFilter(e.target.value)}
-                >
-                  <MenuItem value="all">All Priority</MenuItem>
+              <Grid item>
+                <TextField select label="Priority" size="small" sx={{ width: 110 }} value={priorityFilter} onChange={(e) => { setPriorityFilter(e.target.value); setPage(0); }}>
+                  <MenuItem value="all">All</MenuItem>
                   <MenuItem value="low">Low</MenuItem>
                   <MenuItem value="medium">Medium</MenuItem>
                   <MenuItem value="high">High</MenuItem>
                 </TextField>
               </Grid>
 
-              <Grid item xs={12} md sx={{ display: 'flex', justifyContent: { md: 'flex-end' }, gap: 1 }}>
-                <TextField 
-                // variant="outlined"
-                  placeholder="AI Prompt Search..."
-                  size="small"
-                  fullWidth
-                  sx={{ maxWidth: { md: 250 } }}
-                  value={naturalQuery}
-                  onChange={(e) => setNaturalQuery(e.target.value)}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        {naturalQuery && (
-                          <IconButton size="small" onClick={() => setNaturalQuery("")}>
-                            <CloseIcon fontSize="small" style={{color:"red"}} />
-                          </IconButton>
-                        )}
-                      </InputAdornment>
-                    ),
-                  }}
+              <Grid item xs>
+                <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
+                  <TextField 
+                    placeholder="AI Search..."
+                    size="small"
+                    sx={{ width: 180 }}
+                    value={naturalQuery}
+                    onChange={(e) => setNaturalQuery(e.target.value)}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          {naturalQuery && (
+                            <IconButton size="small" onClick={() => setNaturalQuery("")}>
+                              <CloseIcon fontSize="small" style={{color:"red"}} />
+                            </IconButton>
+                          )}
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                  <Button 
+                    variant="contained" 
+                    color="secondary" 
+                    size="small"
+                    startIcon={<AutoAwesomeIcon sx={{ fontSize: '1rem !important' }} />}
+                    onClick={handleAISearch}
+                    disabled={aiLoading}
+                    sx={{ height: 42, whiteSpace: 'nowrap', fontSize: '0.8rem' }}
+                  >
+                    {aiLoading ? "..." : "AI Search"}
+                  </Button>
                   
-                />
-                <Button 
-                  variant="contained" 
-                  color="secondary" 
-                  startIcon={<AutoAwesomeIcon />}
-                  onClick={handleAISearch}
-                  disabled={aiLoading}
-                  sx={{ whiteSpace: 'nowrap' }}
-                >
-                  {aiLoading ? "Parsing..." : "AI Search"}
-                </Button>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 'bold', ml: 2, display: 'inline-block',
+                    alignSelf: 'flex-end',pb:1.5,fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                    Showing: {filteredTasks.length > 0 ? `${page * rowsPerPage + 1}-${Math.min((page + 1) * rowsPerPage, filteredTasks.length)}` : "0-0"}
+                  </Typography>
+                </Stack>
               </Grid>
             </Grid>
 
@@ -422,7 +419,7 @@ export default function AdminDashboard() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredTasks.map((task) => (
+                {paginatedTasks.map((task) => (
                   <TableRow key={task._id}>
                     <TableCell>{task.title}</TableCell>
                     <TableCell>{task.status}</TableCell>
@@ -449,6 +446,14 @@ export default function AdminDashboard() {
                 ))}
               </TableBody>
             </Table>
+            <TablePagination
+              component="div"
+              count={filteredTasks.length}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              rowsPerPageOptions={[]}
+            />
           </>
         )}
 
