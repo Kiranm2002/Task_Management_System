@@ -4,9 +4,7 @@ const DEFAULT_TTL = 60 * 5;
 
 const setCache = async (key, data, ttl = DEFAULT_TTL) => {
   try {
-    await redisClient.set(key, JSON.stringify(data), {
-      ex: ttl,
-    });
+    await redisClient.set(key, JSON.stringify(data),"EX",ttl);
   } catch (error) {
     console.error("Cache SET Error:", error.message);
   }
@@ -32,7 +30,7 @@ const clearAllTasksCache = async () => {
   try {
     const keys = await redisClient.keys("tasks:*"); 
     if (keys.length > 0) {
-      await redisClient.del(keys);
+      await redisClient.del(...keys);
     }
   } catch (error) {
     console.error("Cache Clear Error:", error.message);

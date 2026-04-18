@@ -21,6 +21,7 @@ import {
   Tabs,
   Tab,
   CircularProgress,
+  InputAdornment
 } from "@mui/material";
 
 import CloseIcon from "@mui/icons-material/Close";
@@ -28,6 +29,7 @@ import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import { Snackbar, Alert } from "@mui/material";
 import Navbar from "../components/Navbar";
 import { socket } from "../api/socket";
+
 
 export default function AdminDashboard() {
   const token = localStorage.getItem("accessToken");
@@ -290,7 +292,7 @@ export default function AdminDashboard() {
             </Card>
           </Grid>
           <Grid item xs={12} md={3}>
-            <Card sx={{ height: '100%', bgcolor: '#f5f5f5' }}>
+            <Card sx={{ height: '100%', bgcolor:"white" }}>
               <CardContent>
                 <Typography variant="subtitle2" fontWeight="bold" gutterBottom>Top 5 Active Users</Typography>
                 {topActiveUsers.map((user, index) => (
@@ -324,7 +326,22 @@ export default function AdminDashboard() {
                   sx={{ width: { sm: 200 } }}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                />
+                  InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      {searchTerm ? (
+                        <IconButton
+                          size="small"
+                          onClick={() => setSearchTerm("")}
+                          sx={{ visibility: "visible" }}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      ) : null}
+                    </InputAdornment>
+                  ),
+                }}
+              />
               </Grid>
               <Grid item xs={6} sm="auto">
                 <TextField
@@ -361,12 +378,25 @@ export default function AdminDashboard() {
 
               <Grid item xs={12} md sx={{ display: 'flex', justifyContent: { md: 'flex-end' }, gap: 1 }}>
                 <TextField 
+                // variant="outlined"
                   placeholder="AI Prompt Search..."
                   size="small"
                   fullWidth
                   sx={{ maxWidth: { md: 250 } }}
                   value={naturalQuery}
                   onChange={(e) => setNaturalQuery(e.target.value)}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        {naturalQuery && (
+                          <IconButton size="small" onClick={() => setNaturalQuery("")}>
+                            <CloseIcon fontSize="small" style={{color:"red"}} />
+                          </IconButton>
+                        )}
+                      </InputAdornment>
+                    ),
+                  }}
+                  
                 />
                 <Button 
                   variant="contained" 

@@ -9,3 +9,5 @@ export const socket = io(SOCKET_URL, {
   reconnection: true,
   transports: ["polling", "websocket"]
 });
+
+;
