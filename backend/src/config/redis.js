@@ -1,8 +1,15 @@
-const { Redis } = require("@upstash/redis");
+const Redis = require("ioredis");
 
-const redisClient = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+const redisClient = new Redis(process.env.REDIS_URL, {
+  tls: {
+    rejectUnauthorized: false 
+  },
+  retryStrategy: (times) => {
+    return Math.min(times * 50, 2000);
+  }
 });
+
+redisClient.on("connect", () => console.log("Redis Connected via TCP (ioredis)"));
+redisClient.on("error", (err) => console.error("Redis Error:", err));
 
 module.exports = redisClient;

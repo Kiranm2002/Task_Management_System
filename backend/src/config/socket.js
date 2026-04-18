@@ -1,32 +1,24 @@
 const { Server } = require("socket.io");
-
-let io;
+const { createAdapter } = require("@socket.io/redis-adapter");
+const redisClient = require("./redis"); 
 
 const initSocket = (server) => {
-  io = new Server(server, {
+  const io = new Server(server, {
     cors: {
-      origin: "*", 
-      methods: ["GET", "POST"],
-    },
+      origin: ["https://task-management-system-lilac-six.vercel.app","http://localhost:5173"],
+      credentials: true
+    }
   });
+
+  const pubClient = redisClient;
+  const subClient = redisClient.duplicate();
+  io.adapter(createAdapter(pubClient, subClient));
 
   io.on("connection", (socket) => {
-
-    socket.on("disconnect", () => {
-    });
+    console.log("User connected:", socket.id);
   });
 
   return io;
 };
 
-const getIO = () => {
-  if (!io) {
-    throw new Error("Socket.IO not initialized");
-  }
-  return io;
-};
-
-module.exports = {
-  initSocket,
-  getIO,
-};
+module.exports = { initSocket };
