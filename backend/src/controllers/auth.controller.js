@@ -117,7 +117,12 @@ exports.refreshToken = async (req, res) => {
       return res.status(401).json({ message: "Invalid or expired refresh token" });
     }
 
-    
+    const redisKey = `refreshToken:${decoded.id}`;
+    const storedToken = await getCache(redisKey);
+
+    if (!storedToken || storedToken !== refreshToken) {
+      return res.status(401).json({ message: "Token is no longer valid or has been revoked" });
+    }
 
     const user = await User.findById(decoded.id);
     if (!user) return res.status(404).json({ message: "User not found" });
