@@ -52,16 +52,12 @@ exports.getAdminDashboard = async (req, res) => {
           },
         ]),
       ]);
-
-    res.status(200).json({
-      totalUsers,
-      totalTasks,
-      completedTasks,
-      topUsers,
-    });
+    const response = { totalUsers, totalTasks, completedTasks, topUsers };
+    await setCache(cacheKey, response)
+    res.status(200).json(response);
   } catch (error) {
-    console.error("Dashboard Error:", error.message);
-    res.status(500).json({ message: "Internal Server Error" });
+    console.error("Dashboard Error Details:", error);
+    res.status(500).json({ message: "Internal Server Error",error:error.message });
   }
 };
 
@@ -69,7 +65,9 @@ exports.getAdminDashboard = async (req, res) => {
 exports.getUserDashboard = async (req, res) => {
   try {
     const userId = req.user.id;
-    
+    const cacheKey = `tasks:user:dashboard:${userId}`;
+    const cachedStats = await getCache(cacheKey);
+    if (cachedStats) return res.status(200).json({"from":"cache",cachedStats});
 
     const [totalTasks, pending, inProgress, completed] = await Promise.all([
       Task.countDocuments({ assignedTo: userId, isDeleted: false }),
@@ -85,10 +83,9 @@ exports.getUserDashboard = async (req, res) => {
       completed,
     };
 
-
-    res.status(200).json(stats);
+    await setCache(cacheKey, stats);
+    res.status(200).json({"from":"db",stats});
   } catch (error) {
-    console.error("User Dashboard Error:", error.message);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };

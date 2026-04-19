@@ -78,10 +78,19 @@ exports.getTasks = async (req, res) => {
   }
 };
 
+
 exports.getMyTasks = async (req, res) => {
   try {
-    const tasks = await Task.find({ assignedTo: req.user.id,isDeleted:false })
+    const userId = req.user.id;
+    const cacheKey = `tasks:user:${userId}`;
+
+    const cachedData = await getCache(cacheKey);
+    if (cachedData) return res.status(200).json(cachedData);
+
+    const tasks = await Task.find({ assignedTo: userId, isDeleted: false })
       .sort({ createdAt: -1 });
+
+    await setCache(cacheKey, tasks);
 
     res.status(200).json(tasks);
   } catch (error) {

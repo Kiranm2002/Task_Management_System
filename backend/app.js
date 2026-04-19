@@ -16,7 +16,7 @@ app.use(cors({
   allowedHeaders:["Content-Type", "Authorization"]
 }));
 app.use(express.json());
-
+app.set('trust proxy', 1);
 
 
 app.use("/api/auth", authRoutes);
