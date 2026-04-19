@@ -67,7 +67,7 @@ exports.getUserDashboard = async (req, res) => {
     const userId = req.user.id;
     const cacheKey = `tasks:user:dashboard:${userId}`;
     const cachedStats = await getCache(cacheKey);
-    if (cachedStats) return res.status(200).json({"from":"cache",cachedStats});
+    if (cachedStats) return res.status(200).json(cachedStats);
 
     const [totalTasks, pending, inProgress, completed] = await Promise.all([
       Task.countDocuments({ assignedTo: userId, isDeleted: false }),
@@ -84,7 +84,7 @@ exports.getUserDashboard = async (req, res) => {
     };
 
     await setCache(cacheKey, stats);
-    res.status(200).json({"from":"db",stats});
+    res.status(200).json(stats);
   } catch (error) {
     res.status(500).json({ message: "Internal Server Error" });
   }
