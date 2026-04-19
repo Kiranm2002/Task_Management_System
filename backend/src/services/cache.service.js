@@ -28,9 +28,11 @@ const getCache = async (key) => {
 
 const clearAllTasksCache = async () => {
   try {
-    const keys = await redisClient.keys("tasks:*"); 
-    if (keys.length > 0) {
-      await redisClient.del(...keys);
+    const taskKeys = await redisClient.keys("tasks:*");
+    const adminKeys = await redisClient.keys("admin:dashboard:*");
+    const allKeys = [...taskKeys, ...adminKeys];
+    if (allKeys.length > 0) {
+      await redisClient.del(...allKeys);
     }
   } catch (error) {
     console.error("Cache Clear Error:", error.message);
