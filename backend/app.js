@@ -10,7 +10,7 @@ const aiRoutes = require("./src/routes/ai.routes")
 const app = express();
 
 app.use(cors({
-  origin:["https://task-management-system-lilac-six.vercel.app","http://localhost:5173"],
+  origin:process.env.FRONTEND_URL,
   credentials:true,
   methods:["GET","POST","PUT","PATCH","DELETE"],
   allowedHeaders:["Content-Type", "Authorization"]
