@@ -121,8 +121,9 @@ export default function AdminDashboard() {
 }, [open]);
 
   useEffect(() => {
+    let debounceTimer;  
     const getRecommendation = async () => {
-      if (form.title.length > 5 && open) {
+      if (form.title.trim().length > 5 && open) {
         try {
           const res = await axios.post("/ai/recommend", { title: form.title });
           setAiAdvice(res.data.advice);
@@ -133,7 +134,11 @@ export default function AdminDashboard() {
         setAiAdvice("");
       }
     };
-    getRecommendation();
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      getRecommendation();
+    }, 1000);
+    return () => clearTimeout(debounceTimer);
   }, [form.title, open]);
 
   const handleAIDescription = async () => {
