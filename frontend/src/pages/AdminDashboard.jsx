@@ -109,6 +109,18 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
+  if (!open) {
+    setForm({
+      title: "",
+      description: "",
+      priority: "medium",
+      assignedTo: "",
+    });
+    setAiAdvice("");
+  }
+}, [open]);
+
+  useEffect(() => {
     const getRecommendation = async () => {
       if (form.title.length > 5 && open) {
         try {
@@ -144,7 +156,7 @@ export default function AdminDashboard() {
       const res = await axios.post("/ai/search-parse", { text: naturalQuery });
       const tasksRes = await axios.get("/tasks", { params: res.data.query });
       setTasks(tasksRes.data.data || tasksRes.data);
-      setPage(0); // Reset to first page on search
+      setPage(0); 
       setSnackbar({ open: true, message: "AI filtered your tasks!" });
     } catch (err) {
       setSnackbar({ open: true, message: "AI Search failed to parse query" });
@@ -335,17 +347,18 @@ export default function AdminDashboard() {
                 <TextField
                   placeholder="Search title..."
                   size="small"
-                  sx={{ width: 150 }}
+                  sx={{ width: 160 }}
                   value={searchTerm}
                   onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
                   InputProps={{
-                    endAdornment: (
+                    endAdornment: searchTerm && (
                       <InputAdornment position="end">
-                        {searchTerm ? (
-                          <IconButton size="small" onClick={() => setSearchTerm("")}>
-                            <CloseIcon fontSize="small" />
-                          </IconButton>
-                        ) : null}
+                        <IconButton 
+                          size="small" 
+                          onClick={() => { setSearchTerm(""); setPage(0); }}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
                       </InputAdornment>
                     ),
                   }}
@@ -370,7 +383,7 @@ export default function AdminDashboard() {
 
               <Grid item xs>
                 <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
-                  <TextField 
+                  <TextField
                     placeholder="AI Search..."
                     size="small"
                     sx={{ width: 180 }}
@@ -379,9 +392,13 @@ export default function AdminDashboard() {
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
-                          {naturalQuery && (
-                            <IconButton size="small" onClick={() => setNaturalQuery("")}>
-                              <CloseIcon fontSize="small" style={{color:"red"}} />
+                          {naturalQuery.length > 0 && (
+                            <IconButton 
+                              size="small" 
+                              onClick={() => setNaturalQuery("")}
+                              edge="end"
+                            >
+                              <CloseIcon fontSize="small" style={{ color: "red" }} />
                             </IconButton>
                           )}
                         </InputAdornment>
@@ -508,29 +525,80 @@ export default function AdminDashboard() {
                 {aiAdvice}
               </Alert>
             )}
+            <Box sx={{ mt: 2 }}>
+              <Box sx={{ position: "relative" }}>
+                <TextField
+                  label="Description"
+                  fullWidth
+                  multiline
+                  rows={4}
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  sx={{ 
+                    "& .MuiInputBase-root": { 
+                      pr: 7, 
+                      alignItems: "flex-start" 
+                    } 
+                  }}
+                />
 
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 1 }}>
-              <TextField 
-                label="Description" 
-                fullWidth 
-                multiline 
-                rows={3} 
-                value={form.description} 
-                onChange={(e) => setForm({ ...form, description: e.target.value })} 
-              />
-              <IconButton 
-                color="secondary" 
-                onClick={handleAIDescription} 
-                disabled={aiLoading} 
+                <Box
+                  sx={{
+                    position: "absolute",
+                    top: 12,
+                    right: 12,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    zIndex: 5, 
+                  }}
+                >
+                  <IconButton
+                    size="small"
+                    color="secondary"
+                    onClick={handleAIDescription}
+                    disabled={aiLoading}
+                    sx={{
+                      bgcolor: "#f3e5f5",
+                      "&:hover": { bgcolor: "#e1bee7" },
+                      width: 32,
+                      height: 32,
+                      boxShadow: 1
+                    }}
+                  >
+                    {aiLoading ? (
+                      <CircularProgress size={16} color="inherit" />
+                    ) : (
+                      <AutoAwesomeIcon sx={{ fontSize: 18 }} />
+                    )}
+                  </IconButton>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontSize: "0.55rem",
+                      fontWeight: "bold",
+                      color: "secondary.main",
+                      mt: 0.3,
+                      textTransform: "uppercase"
+                    }}
+                  >
+                    AI Gen
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Typography 
+                variant="caption" 
                 sx={{ 
-                  bgcolor: '#f3e5f5',
-                  width: 45, 
-                  height: 45,
-                  '&:hover': { bgcolor: '#e1bee7' }
+                  display: "block", 
+                  mt: 0.5, 
+                  ml: 1, 
+                  color: "text.secondary",
+                  fontStyle: "italic" 
                 }}
               >
-                {aiLoading ? <CircularProgress size={20} /> : <AutoAwesomeIcon sx={{ fontSize: 20 }} />}
-              </IconButton>
+                You can use AI to generate a smart description
+              </Typography>
             </Box>
 
             <TextField select label="Priority"
@@ -541,7 +609,8 @@ export default function AdminDashboard() {
             </TextField>
             <TextField select fullWidth label="Assign To" margin="normal" value={form.assignedTo} onChange={(e) => setForm({ ...form, assignedTo: e.target.value })} SelectProps={{ displayEmpty: true }}>
               <MenuItem value=""><em>Select User</em></MenuItem>
-              {users.map((u) => <MenuItem key={u._id} value={u._id}>{u.name}</MenuItem>)}
+              {users.filter((u) => u.role === "user")
+              .map((u) => <MenuItem key={u._id} value={u._id}>{u.name}</MenuItem>)}
             </TextField>
             <Button sx={{ mt: 2 }} fullWidth variant="contained" onClick={createTask}>Add Task</Button>
           </Box>
