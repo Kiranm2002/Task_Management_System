@@ -66,8 +66,8 @@ exports.login = async (req, res) => {
         const result = await authService.loginUser(email, password);
         res.cookie('refreshToken', result.refreshToken, {
             httpOnly: true, 
-            secure: process.env.NODE_ENV === 'production', 
-            sameSite: 'Lax', 
+            secure: true, 
+            sameSite: 'None', 
             maxAge: 7 * 24 * 60 * 60 * 1000 
         })
         res.status(200).json({ success: true, ...result });

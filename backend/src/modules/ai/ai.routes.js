@@ -3,7 +3,6 @@ const router = express.Router();
 const aiController = require("./ai.controller"); 
 const authMiddleware = require("../../shared/middleware/auth.middleware");
 
-// router.post("/generate-desc", authMiddleware, aiController.generateDescription);
 router.post("/generate-task", authMiddleware, aiController.generateDescription);
 router.get("/search", authMiddleware, aiController.searchParse);
 router.post("/recommend", authMiddleware, aiController.recommendUser);

@@ -18,10 +18,11 @@ const TaskCard = ({ id, task, isOverlay }) => {
     const colors = { urgent: 'error', high: 'error', medium: 'warning', low: 'success' };
     return colors[priority?.toLowerCase()] || 'default';
   };
-
-  const subtaskProgress = task?.subtasks?.length > 0 
-    ? Math.round((task.completedSubtasks / task.subtasks.length) * 100) 
-    : 0;
+  const completedCount = task?.subtasks?.filter(st => st.isCompleted).length || 0;
+  const totalSubtasks = task?.subtasks?.length || 0;
+  const subtaskProgress = totalSubtasks > 0 
+  ? Math.round((completedCount / totalSubtasks) * 100) 
+  : 0;
 
   return (
     <Card
