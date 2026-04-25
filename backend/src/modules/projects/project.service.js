@@ -12,7 +12,14 @@ exports.createNewProject = async (projectData) => {
 
 exports.getAllProjects = async () => {
     return await Project.find({ isDeleted: { $ne: true } })
-        .populate("teamId", "name")
+        .populate({
+            path: "teamId",
+            select: "name members",
+            populate: {
+                path: "members",
+                select: "name email"
+            }
+        })
         .populate("createdBy", "name")
         .sort({ createdAt: -1 });
 };
@@ -38,7 +45,14 @@ exports.getProjectDetails = async (projectId) => {
     return await Project.findOne({ 
         _id: projectId, 
         isDeleted: { $ne: true } 
-    }).populate("teamId", "name members");
+    }).populate({
+        path: "teamId",
+        select: "name members",
+        populate: {
+            path: "members",
+            select: "name email",
+        }     
+    });
 };
 
 

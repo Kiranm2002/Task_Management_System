@@ -71,7 +71,9 @@ const Tasks = () => {
   const { data: tasks, isLoading: tasksLoading, refetch } = useGetTasksQuery();
   const { data: projects } = useGetProjectsQuery();
   const { data: users } = useGetAllUsersQuery();
-  
+  const selectedProjectData = projects?.find(p => String(p._id) === String(formData.projectId));
+  const availableTeamMembers = selectedProjectData?.teamId?.members || [];
+
   const [createTask] = useCreateTaskMutation();
   const [updateTask] = useUpdateTaskMutation();
   const [deleteTask] = useDeleteTaskMutation();
@@ -461,8 +463,19 @@ const Tasks = () => {
               )}
               <FormControl fullWidth variant="outlined">
                   <InputLabel>Assign To User</InputLabel>
-                  <Select fullWidth value={formData.assignedTo} label="Assign To User" onChange={(e) => setFormData({...formData, assignedTo: e.target.value})}>
-                      {users?.map(u => <MenuItem key={u._id} value={u._id}>{u.name}</MenuItem>)}
+                  <Select fullWidth value={formData.assignedTo} label="Assign To User" 
+                  onChange={(e) => setFormData({...formData, assignedTo: e.target.value})}
+                  disabled={!formData.projectId}
+                  >
+                      {availableTeamMembers.length > 0 ? (
+                        availableTeamMembers.map(u => (
+                          <MenuItem key={u._id} value={u._id}>{u.name}</MenuItem>
+                        ))
+                      ) : (
+                        <MenuItem disabled>
+                          {formData.projectId ? "No members found in this team" : "Please select a project first"}
+                        </MenuItem>
+                      )}
                   </Select>
               </FormControl>
             </Box>
