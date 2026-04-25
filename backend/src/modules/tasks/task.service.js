@@ -7,6 +7,78 @@ const {getIO} = require("../../config/socket")
 const emailService = require("../../shared/services/email.service");
 const User = require("../../shared/models/user.model");
 
+// exports.createTask = async (taskData, files, userId) => {
+//     let attachments = [];
+//     if (files && files.length > 0) {
+//         attachments = files.map(file => ({
+//             url: file.path,
+//             filename: file.originalname,
+//             fileType: file.mimetype
+//         }));
+//     }
+
+//     let finalDescription = taskData.description;
+//     let finalPriority = taskData.priority;
+//     let finalSubtasks = [];
+
+//     if (taskData.subtasks) {
+//         try {
+//             let parsed = typeof taskData.subtasks === 'string' 
+//                 ? JSON.parse(taskData.subtasks) 
+//                 : taskData.subtasks;
+
+//             finalSubtasks = Array.isArray(parsed) ? parsed : [];
+//         } catch (e) {
+//             console.error("JSON Parse Error in subtasks:", e);
+//             finalSubtasks = [];
+//         }
+//     }
+
+//     if ((!finalDescription || taskData.useAI === 'true') && (!finalSubtasks || finalSubtasks.length === 0)) {
+//         try {
+//             const aiData = await aiService.generateAIDescription(taskData.title);
+//             finalDescription = aiData.description;
+//             finalPriority = aiData.priority;
+//             finalSubtasks = aiData.subtasks.map(st => ({ title: st, isCompleted: false })); 
+//         } catch (error) {
+//             console.error("AI Generation failed, using defaults:", error);
+//             finalDescription = finalDescription || "No description provided.";
+//         }
+//     }
+
+//     const task = await Task.create({
+//         ...taskData,
+//         description: finalDescription,
+//         priority: finalPriority || taskData.priority || "medium",
+//         subtasks: finalSubtasks, 
+//         createdBy: userId,
+//         attachments
+//     });
+    
+//     await collabService.logActivity(task._id, userId, "TASK_CREATED", null, task.title);
+
+//     if (task.assignedTo) {
+//         await notificationService.createNotification(
+//             task.assignedTo, 
+//             userId, 
+//             "TASK_ASSIGNMENT", 
+//             `New task assigned: ${task.title}`, 
+//             task._id
+//         );
+
+//         const assignee = await User.findById(task.assignedTo);
+//         if (assignee && assignee.email) {
+//             emailService.sendTaskNotificationEmail(
+//                 assignee.email,
+//                 "New Task Assigned",
+//                 "You have been assigned a new task in the Enterprise Task Manager.",
+//                 task.title
+//             );
+//         }
+//     }
+//     return task;
+// };
+
 exports.createTask = async (taskData, files, userId) => {
     let attachments = [];
     if (files && files.length > 0) {
@@ -46,13 +118,28 @@ exports.createTask = async (taskData, files, userId) => {
         }
     }
 
+    let finalDependencies = Array.isArray(taskData.dependencies) ? [...taskData.dependencies] : [];
+
+    if (taskData.assignedTo) {
+        const lastIncompleteTask = await Task.findOne({
+            assignedTo: taskData.assignedTo,
+            status: { $ne: "completed" },
+            isDeleted: false
+        }).sort({ createdAt: -1 });
+
+        if (lastIncompleteTask && !finalDependencies.includes(lastIncompleteTask._id.toString())) {
+            finalDependencies.push(lastIncompleteTask._id);
+        }
+    }
+
     const task = await Task.create({
         ...taskData,
         description: finalDescription,
         priority: finalPriority || taskData.priority || "medium",
         subtasks: finalSubtasks, 
         createdBy: userId,
-        attachments
+        attachments,
+        dependencies: finalDependencies 
     });
     
     await collabService.logActivity(task._id, userId, "TASK_CREATED", null, task.title);
@@ -136,12 +223,15 @@ exports.updateTaskDetails = async (taskId, updateData, userId, userRole, newFile
         const assigneeId = task.assignedTo ? task.assignedTo.toString() : null;
         const currentUserId = userId.toString();
         if (assigneeId !== currentUserId) {
-            console.log(`Access Denied for Task ${taskId}: Owner is ${assigneeId}, but User is ${currentUserId}`);
             throw new Error("Access Denied");
         }
         
         if (newStatus) task.status = newStatus;
         if (updateData.actualHours !== undefined) task.actualHours = updateData.actualHours;
+        if (updateData.startDate) task.startDate = updateData.startDate;
+        if (Object.prototype.hasOwnProperty.call(updateData, 'completedAt')) {
+            task.completedAt = updateData.completedAt;
+        }
     } else {
         if (updateData.title) task.title = updateData.title;
     
@@ -158,6 +248,10 @@ exports.updateTaskDetails = async (taskId, updateData, userId, userRole, newFile
     if (updateData.actualHours !== undefined) task.actualHours = Number(updateData.actualHours);
     
     if (updateData.dueDate) task.dueDate = updateData.dueDate;
+    if (updateData.startDate) task.startDate = updateData.startDate;
+    if (Object.prototype.hasOwnProperty.call(updateData, 'completedAt')) {
+        task.completedAt = updateData.completedAt;
+    }
     }
 
     if (newFiles && newFiles.length > 0) {
@@ -223,7 +317,18 @@ exports.moveTaskKanban = async (taskId, newStatus, userId, userRole, io) => {
         }
     }
 
-    const updatedTask = await this.updateTaskDetails(taskId, { status: newStatus }, userId, userRole);
+    const updateData = { status: newStatus };
+    if (newStatus === "in-progress" && !task.startDate) {
+        updateData.startDate = new Date();
+    }
+    if (newStatus === "completed") {
+        updateData.completedAt = new Date();
+    } else if (task.status === "completed" && newStatus !== "completed") {
+        updateData.completedAt = null;
+    }
+
+    // const updatedTask = await this.updateTaskDetails(taskId, { status: newStatus }, userId, userRole);
+    const updatedTask = await this.updateTaskDetails(taskId, updateData, userId, userRole);
     if (!updatedTask) throw new Error("Task not found");
     
     const projectIdStr = updatedTask.projectId._id?.toString() || updatedTask.projectId.toString();
@@ -233,6 +338,7 @@ exports.moveTaskKanban = async (taskId, newStatus, userId, userRole, io) => {
     io.to(assignedToId).emit("TASK_UPDATED", updatedTask);
     io.emit("TASK_LIST_REFRESH", { taskId, newStatus });
     
+
     try {
         const deepAnalytics = await analyticsService.getDeepAnalytics();
         io.to("admin_analytics_room").emit("DEEP_STATS_UPDATE", deepAnalytics);

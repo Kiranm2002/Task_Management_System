@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useEffect,useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import socket from '../config/socket';
 import { selectCurrentToken, selectCurrentUser } from '../features/auth/authSlice';
@@ -15,53 +15,7 @@ export const SocketProvider = ({ children }) => {
   const token = useSelector(selectCurrentToken);
   const user = useSelector(selectCurrentUser);
 
-//   useEffect(() => {
-//     if (token) {
-//       socket.auth = { token };
-//       socket.connect();
 
-//       socket.on('TASK_MOVED', (data) => {
-//         dispatch(updateTaskFromSocket({
-//           taskId: data.taskId, 
-//           updatedTask: { status: data.newStatus }
-//         }));
-//         dispatch(
-//         taskApi.util.updateQueryData('getTasks', undefined, (draftTasks) => {
-//             const task = draftTasks.find(t => t._id === data.taskId);
-//             if (task) {
-//                 task.status = data.newStatus;
-//             }
-//         })
-//     );
-//       });
-
-// socket.on('TASK_UPDATED', (updatedTask) => {
-//     dispatch(updateTaskFromSocket({
-//         taskId: updatedTask._id, 
-//         updatedTask: updatedTask 
-//     }));
-
-//     dispatch(
-//         taskApi.util.updateQueryData('getTasks', undefined, (draftTasks) => {
-//             const index = draftTasks.findIndex(t => t._id === updatedTask._id);
-//             if (index !== -1) {
-//                 draftTasks[index] = updatedTask;
-//             }
-//         })
-//     );
-// });
-
-//       socket.on('notification_received', (notification) => {
-//         dispatch(addNotification(notification));
-//       });
-
-//       return () => {
-//         socket.off('task_moved');
-//         socket.off('notification_received');
-//         socket.disconnect();
-//       };
-//     }
-//   }, [token, dispatch]);
     useEffect(() => {
         if (token && user?.id) {
             socket.auth = { token };

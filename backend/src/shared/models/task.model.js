@@ -15,7 +15,9 @@ const taskSchema = new mongoose.Schema({
   
   estimatedHours: { type: Number, default: 0 },
   actualHours: { type: Number, default: 0 },
+  startDate: { type: Date, default:null },
   dueDate: { type: Date },
+  completedAt: { type: Date, default:null },
   
   dependencies: [{ type: mongoose.Schema.Types.ObjectId, ref: "Task" }], 
   attachments: [{

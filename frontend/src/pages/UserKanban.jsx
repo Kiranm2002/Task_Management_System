@@ -20,7 +20,10 @@ const UserKanban = () => {
   const [activeTask, setActiveTask] = useState(null);
   const [errorModal, setErrorModal] = useState({ open: false, message: '' });
 
-  const { data: rawTasks, isLoading: boardLoading, isFetching } = useGetUserKanbanTasksQuery();
+  const { data: rawTasks, isLoading: boardLoading, isFetching } = useGetUserKanbanTasksQuery(undefined,{
+    refetchOnFocus: true, 
+    refetchOnReconnect: true
+  });
   const [updateTaskStatus] = useUpdateTaskStatusMutation();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));

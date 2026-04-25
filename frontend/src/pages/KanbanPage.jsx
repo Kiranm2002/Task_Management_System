@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { DndContext, PointerSensor, useSensor, useSensors, closestCorners, DragOverlay } from '@dnd-kit/core';
 import { 
   Box, Typography, Skeleton, FormControl, InputLabel, 
-  Select, MenuItem, Paper, TextField, InputAdornment 
+  Select, MenuItem, Paper, TextField, InputAdornment, Modal, Button 
 } from '@mui/material';
-import { Search } from '@mui/icons-material';
+import { Search, WarningAmber } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { moveTask, setBoardData } from '../features/kanban/kanbanSlice';
 import { 
@@ -18,13 +18,14 @@ import { useSocket } from '../providers/SocketProvider';
 import { kanbanApi } from '../features/kanban/kanbanApi';
 
 const KanbanPage = () => {
-  const socket = useSocket()
+  const socket = useSocket();
   const dispatch = useDispatch();
   const board = useSelector((state) => state.kanban);
   
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTask, setActiveTask] = useState(null);
+  const [errorModal, setErrorModal] = useState({ open: false, message: '' });
 
   const { data: projects, isLoading: projectsLoading } = useGetProjectsQuery();
   
@@ -46,7 +47,7 @@ const KanbanPage = () => {
     setActiveTask(board.tasks[event.active.id]);
   };
 
-  const handleDragEnd = (event) => {
+  const handleDragEnd = async (event) => {
     const { active, over } = event;
     setActiveTask(null);
     if (!over) return;
@@ -56,8 +57,22 @@ const KanbanPage = () => {
     const newStatus = board.columns[overId] ? overId : board.tasks[overId]?.status;
 
     if (newStatus && activeId !== overId) {
+      const originalStatus = board.tasks[activeId].status;
+      if (originalStatus === newStatus) return;
+
       dispatch(moveTask({ taskId: activeId, newStatus }));
-      updateStatus({ taskId: activeId, status: newStatus });
+      
+      try {
+        await updateStatus({ taskId: activeId, status: newStatus }).unwrap();
+      } catch (error) {
+        if (boardData) {
+            dispatch(setBoardData(boardData));
+        }
+        setErrorModal({
+          open: true,
+          message: error?.data?.message || "Dependency requirement failed"
+        });
+      }
     }
   };
 
@@ -73,7 +88,7 @@ const KanbanPage = () => {
         socket.emit("LEAVE_PROJECT", selectedProjectId);
       };
     }
-  }, [socket, selectedProjectId,dispatch]);
+  }, [socket, selectedProjectId, dispatch]);
 
   if (projectsLoading) return <Skeleton variant="rectangular" height="80vh" />;
 
@@ -147,6 +162,40 @@ const KanbanPage = () => {
           </DragOverlay>
         </DndContext>
       )}
+
+      <Modal
+        open={errorModal.open}
+        onClose={() => setErrorModal({ open: false, message: '' })}
+      >
+        <Box sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 400,
+          bgcolor: 'background.paper',
+          boxShadow: 24,
+          p: 4,
+          borderRadius: 2,
+          textAlign: 'center'
+        }}>
+          <WarningAmber color="error" sx={{ fontSize: 50, mb: 2 }} />
+          <Typography variant="h6" component="h2" gutterBottom fontWeight="bold">
+            Action Restricted
+          </Typography>
+          <Typography variant="body1" sx={{ mb: 3 }}>
+            {errorModal.message}
+          </Typography>
+          <Button
+            variant="contained"
+            fullWidth
+            onClick={() => setErrorModal({ open: false, message: '' })}
+            sx={{ borderRadius: 1.5, py: 1 }}
+          >
+            OK
+          </Button>
+        </Box>
+      </Modal>
     </Box>
   );
 };

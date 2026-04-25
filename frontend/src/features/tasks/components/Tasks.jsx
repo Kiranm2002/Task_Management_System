@@ -319,6 +319,16 @@ const Tasks = () => {
                 </Stack>
                 <Typography variant="h6" fontWeight={700} noWrap>{task.title}</Typography>
                 <Typography variant="caption" color="text.secondary">Project: {task.projectId?.name || 'No Project'}</Typography>
+                
+                <Stack direction="row" justifyContent="space-between" sx={{ mt: 0.5 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    {task.startDate ? `Start Date: ${task.startDate.split('T')[0]}` : ''}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {task.completedAt ? `Completed Date: ${task.completedAt.split('T')[0]}` : ''}
+                  </Typography>
+                </Stack>
+
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
                     <Avatar sx={{ width: 28, height: 28, fontSize: '0.7rem' }}>{task.assignedTo?.name?.[0]}</Avatar>
                     <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
