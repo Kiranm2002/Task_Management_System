@@ -109,55 +109,43 @@ const Tasks = () => {
   };
 
   const handleAIGenerate = async () => {
-  if (!formData.title || formData.title.length < 3) {
-    setMessageModal({ open: true, type: 'error', text: 'Please enter a descriptive title first.' });
-    return;
-  }
-  
-  setIsGenerating(true);
-  setAiAdvice(null);
-  
-  try {
-    const response = await generateTaskDetails({ title: formData.title }).unwrap();
-    
-    setFormData(prev => ({
-      ...prev,
-      description: response.description,
-      priority: response.priority,
-      estimatedHours: response.estimatedHours || 0,
-      subtasks: response.subtasks.map(st => ({ title: st, isCompleted: false }))
-    }));
-
-    const currentProject = projects?.find(p => String(p._id) === String(formData.projectId));
-    
-    if (currentProject) {
-      const teamId = currentProject.teamId?._id || currentProject.team;
-
-      if (teamId) {
-        setIsRecommending(true);
-        const recResponse = await recommendUser({ 
-          title: formData.title, 
-          teamId: teamId 
-        }).unwrap();
-        setAiAdvice(recResponse.advice);
-        if (recResponse.advice?.recommendedUserId) {
-          setFormData(prev => ({ ...prev, assignedTo: recResponse.advice.recommendedUserId }));
-        }
-      } else {
-        console.warn("Recommendation skipped: No team found on this project.");
-      }
-    } else {
-      console.warn("Recommendation skipped: No project matched the selected ID.");
+    if (!formData.title || formData.title.length < 3) {
+      setMessageModal({ open: true, type: 'error', text: 'Please enter a descriptive title first.' });
+      return;
     }
-
-  } catch (err) {
-    console.error("AI Error Catch:", err);
-    setMessageModal({ open: true, type: 'error', text: 'AI enhancement failed' });
-  } finally {
-    setIsGenerating(false);
-    setIsRecommending(false);
-  }
-};
+    setIsGenerating(true);
+    setAiAdvice(null);
+    try {
+      const response = await generateTaskDetails({ title: formData.title }).unwrap();
+      setFormData(prev => ({
+        ...prev,
+        description: response.description,
+        priority: response.priority,
+        estimatedHours: response.estimatedHours || 0,
+        subtasks: response.subtasks.map(st => ({ title: st, isCompleted: false }))
+      }));
+      const currentProject = projects?.find(p => String(p._id) === String(formData.projectId));
+      if (currentProject) {
+        const teamId = currentProject.teamId?._id || currentProject.team;
+        if (teamId) {
+          setIsRecommending(true);
+          const recResponse = await recommendUser({ 
+            title: formData.title, 
+            teamId: teamId 
+          }).unwrap();
+          setAiAdvice(recResponse.advice);
+          if (recResponse.advice?.recommendedUserId) {
+            setFormData(prev => ({ ...prev, assignedTo: recResponse.advice.recommendedUserId }));
+          }
+        }
+      }
+    } catch (err) {
+      setMessageModal({ open: true, type: 'error', text: 'AI enhancement failed' });
+    } finally {
+      setIsGenerating(false);
+      setIsRecommending(false);
+    }
+  };
 
   const handleSubmit = async () => {
     try {
@@ -170,7 +158,6 @@ const Tasks = () => {
         }
       });
       selectedFiles.forEach(file => data.append('attachments', file));
-
       if (editMode) {
         await updateTask({ id: selectedTask._id, data }).unwrap();
         setMessageModal({ open: true, type: 'success', text: 'Task updated!' });
@@ -324,19 +311,23 @@ const Tasks = () => {
                 
                 <Stack direction="row" justifyContent="space-between" sx={{ mt: 0.5 }}>
                   <Typography variant="caption" color="text.secondary">
-                    {task.startDate ? `Start Date: ${task.startDate.split('T')[0]}` : ''}
+                    {task.startDate ? `Start: ${task.startDate.split('T')[0]}` : ''}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {task.completedAt ? `Completed Date: ${task.completedAt.split('T')[0]}` : ''}
+                    {task.completedAt ? `End: ${task.completedAt.split('T')[0]}` : ''}
                   </Typography>
                 </Stack>
 
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
-                    <Avatar sx={{ width: 28, height: 28, fontSize: '0.7rem' }}>{task.assignedTo?.name?.[0]}</Avatar>
-                    <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Timer fontSize="inherit" /> {task.actualHours}/{task.estimatedHours}h
-                    </Typography>
+                <Box sx={{ mt: 2 }}>
+                    <Avatar sx={{ width: 28, height: 28, fontSize: '0.7rem', mb: 1 }}>{task.assignedTo?.name?.[0]}</Avatar>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Timer sx={{ fontSize: 14, color: 'action.active' }} />
+                        <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                            Due: {task.dueDate ? task.dueDate.split('T')[0] : 'N/A'}  Est: {task.estimatedHours}h {task.status === 'completed' && task.actualHours > 0 ? `act.hrs: ${task.actualHours}h` : ''}
+                        </Typography>
+                    </Box>
                 </Box>
+
                 {task.attachments && task.attachments.length > 0 && (
                   <Box sx={{ mt: 2, pt: 1, borderTop: '1px dashed #eee' }}>
                     <Typography variant="caption" fontWeight={700} color="text.secondary">FILES ({task.attachments.length})</Typography>
@@ -481,8 +472,10 @@ const Tasks = () => {
             </Box>
 
             <Grid container spacing={2}>
-                <Grid item xs={6}><TextField fullWidth type="number" label="Est. Hours" value={formData.estimatedHours} onChange={(e) => setFormData({...formData, estimatedHours: e.target.value})} /></Grid>
-                <Grid item xs={6}><TextField fullWidth type="number" label="Actual Hours" value={formData.actualHours} onChange={(e) => setFormData({...formData, actualHours: e.target.value})} /></Grid>
+                <Grid item xs={editMode ? 6 : 12}><TextField fullWidth type="number" label="Estimated Hours" value={formData.estimatedHours} onChange={(e) => setFormData({...formData, estimatedHours: e.target.value})} /></Grid>
+                {editMode && (
+                  <Grid item xs={6}><TextField fullWidth type="number" label="Actual Hours" value={formData.actualHours} InputProps={{ readOnly: true }} /></Grid>
+                )}
             </Grid>
 
             <TextField fullWidth label="Due Date" type={formData.dueDate || focused ? "date" : "text"} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} InputLabelProps={{ shrink: true }} value={formData.dueDate ? formData.dueDate.split('T')[0] : ''} onChange={(e) => setFormData({...formData, dueDate: e.target.value})} />

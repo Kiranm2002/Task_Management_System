@@ -324,11 +324,19 @@ const MyProjects = () => {
                         {task.projectId?.name || 'Independent Task'}
                       </Typography>
                     </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                       <Timer fontSize="inherit" color="action" />
                       <Typography variant="caption" color="error.main" fontWeight={700}>
                         Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No Date'}
                       </Typography>
+                      <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ ml: 1 }}>
+                        Est: {task.estimatedHours || 0}h
+                      </Typography>
+                      {task.actualHours > 0 && (
+                        <Typography variant="caption" color="primary.main" fontWeight={700} sx={{ ml: 1 }}>
+                          Actual: {task.actualHours}h
+                        </Typography>
+                      )}
                     </Box>
                   </Stack>
 

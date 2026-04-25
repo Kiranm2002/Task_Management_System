@@ -7,77 +7,6 @@ const {getIO} = require("../../config/socket")
 const emailService = require("../../shared/services/email.service");
 const User = require("../../shared/models/user.model");
 
-// exports.createTask = async (taskData, files, userId) => {
-//     let attachments = [];
-//     if (files && files.length > 0) {
-//         attachments = files.map(file => ({
-//             url: file.path,
-//             filename: file.originalname,
-//             fileType: file.mimetype
-//         }));
-//     }
-
-//     let finalDescription = taskData.description;
-//     let finalPriority = taskData.priority;
-//     let finalSubtasks = [];
-
-//     if (taskData.subtasks) {
-//         try {
-//             let parsed = typeof taskData.subtasks === 'string' 
-//                 ? JSON.parse(taskData.subtasks) 
-//                 : taskData.subtasks;
-
-//             finalSubtasks = Array.isArray(parsed) ? parsed : [];
-//         } catch (e) {
-//             console.error("JSON Parse Error in subtasks:", e);
-//             finalSubtasks = [];
-//         }
-//     }
-
-//     if ((!finalDescription || taskData.useAI === 'true') && (!finalSubtasks || finalSubtasks.length === 0)) {
-//         try {
-//             const aiData = await aiService.generateAIDescription(taskData.title);
-//             finalDescription = aiData.description;
-//             finalPriority = aiData.priority;
-//             finalSubtasks = aiData.subtasks.map(st => ({ title: st, isCompleted: false })); 
-//         } catch (error) {
-//             console.error("AI Generation failed, using defaults:", error);
-//             finalDescription = finalDescription || "No description provided.";
-//         }
-//     }
-
-//     const task = await Task.create({
-//         ...taskData,
-//         description: finalDescription,
-//         priority: finalPriority || taskData.priority || "medium",
-//         subtasks: finalSubtasks, 
-//         createdBy: userId,
-//         attachments
-//     });
-    
-//     await collabService.logActivity(task._id, userId, "TASK_CREATED", null, task.title);
-
-//     if (task.assignedTo) {
-//         await notificationService.createNotification(
-//             task.assignedTo, 
-//             userId, 
-//             "TASK_ASSIGNMENT", 
-//             `New task assigned: ${task.title}`, 
-//             task._id
-//         );
-
-//         const assignee = await User.findById(task.assignedTo);
-//         if (assignee && assignee.email) {
-//             emailService.sendTaskNotificationEmail(
-//                 assignee.email,
-//                 "New Task Assigned",
-//                 "You have been assigned a new task in the Enterprise Task Manager.",
-//                 task.title
-//             );
-//         }
-//     }
-//     return task;
-// };
 
 exports.createTask = async (taskData, files, userId) => {
     let attachments = [];
@@ -298,7 +227,6 @@ exports.updateTaskDetails = async (taskId, updateData, userId, userRole, newFile
     return task;
 };
 
-
 exports.moveTaskKanban = async (taskId, newStatus, userId, userRole, io) => {
 
     const task = await Task.findById(taskId).populate("dependencies");
@@ -322,12 +250,20 @@ exports.moveTaskKanban = async (taskId, newStatus, userId, userRole, io) => {
         updateData.startDate = new Date();
     }
     if (newStatus === "completed") {
-        updateData.completedAt = new Date();
+        // updateData.completedAt = new Date();
+        const completionDate = new Date();
+        updateData.completedAt = completionDate;
+        if (task.startDate) {
+            const diffInMs = completionDate - new Date(task.startDate);
+            const totalHours = Math.max(0.1, diffInMs / (1000 * 60 * 60)); 
+            updateData.actualHours = parseFloat(totalHours.toFixed(2));
+        } else {
+            updateData.actualHours = 0.5; 
+        }
     } else if (task.status === "completed" && newStatus !== "completed") {
         updateData.completedAt = null;
     }
 
-    // const updatedTask = await this.updateTaskDetails(taskId, { status: newStatus }, userId, userRole);
     const updatedTask = await this.updateTaskDetails(taskId, updateData, userId, userRole);
     if (!updatedTask) throw new Error("Task not found");
     
