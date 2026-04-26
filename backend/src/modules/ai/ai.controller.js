@@ -1,3 +1,4 @@
+const mongoose = require("mongoose")
 const aiService = require("./ai.service");
 const User = require("../../shared/models/user.model"); 
 const Task = require("../../shared/models/task.model"); 
@@ -44,6 +45,7 @@ exports.searchParse = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
 
 exports.recommendUser = async (req, res) => {
     try {

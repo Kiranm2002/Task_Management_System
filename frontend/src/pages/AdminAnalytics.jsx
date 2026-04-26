@@ -2,7 +2,7 @@ import { Grid, Box, Typography, Container } from '@mui/material';
 import { useGetDeepAnalyticsQuery } from '../features/analytics/analyticsApi';
 import { WorkloadTrend, 
   PriorityPie, 
-  // ProjectProgress 
+  ProjectProgress 
 } from '../features/analytics/components/AnalyticsCharts';
 
 const AdminAnalytics = () => {
@@ -25,9 +25,9 @@ const AdminAnalytics = () => {
         <Grid item xs={12} lg={4}>
           <PriorityPie data={analytics?.priorityDist} />
         </Grid>
-        {/* <Grid item xs={12}>
+        <Grid item xs={12}>
           <ProjectProgress data={analytics?.projectStats} />
-        </Grid> */}
+        </Grid>
       </Grid>
     </Container>
   );

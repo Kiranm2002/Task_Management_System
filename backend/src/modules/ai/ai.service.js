@@ -1,6 +1,8 @@
 const Groq = require("groq-sdk");
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-const {Activity} = require("../../shared/models/collaboration.model")
+const {Activity} = require("../../shared/models/collaboration.model");
+const User = require("../../shared/models/user.model")
+const Team = require("../../shared/models/team.model")
 
 const STAGES = ["backlog", "todo", "in-progress", "in-review", "blocked", "completed", "archived"];
 
@@ -63,6 +65,7 @@ exports.predictDelay = async (taskData, userHistory) => {
 
     return safeParse(chatCompletion.choices[0].message.content);
 };
+
 
 exports.parseNaturalLanguage = async (text, context) => {
     const today = new Date().toISOString();

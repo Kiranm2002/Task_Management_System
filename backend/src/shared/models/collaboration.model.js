@@ -6,7 +6,8 @@ const activitySchema = new mongoose.Schema({
   action: { 
     type: String, 
     required: true, 
-    enum: ["TASK_CREATED", "STATUS_CHANGE", "PRIORITY_CHANGE", "ASSIGNMENT_CHANGE", "COMMENT_ADDED", "ATTACHMENT_UPLOADED"] 
+    enum: ["TASK_CREATED", "STATUS_CHANGE", "PRIORITY_CHANGE", "ASSIGNMENT_CHANGE", "COMMENT_ADDED", 
+      "ATTACHMENT_UPLOADED","TASK_COMPLETED","TASK_UPDATED"] 
   },
   description: { type: String }, 
   details: {
@@ -22,7 +23,7 @@ const commentSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   content: { type: String,required:true }, 
   mentions: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-  
+  type: { type: String, enum: ["comment", "note"], default: "comment" },
   isDelete:{type:Boolean,default:false}
 }, { timestamps: true });
 

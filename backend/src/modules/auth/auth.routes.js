@@ -10,7 +10,7 @@ router.post("/login", loginRateLimiter, authController.login);
 router.post("/2fa/setup", authMiddleware, authController.setup2FA);
 router.post("/2fa/verify-enable", authMiddleware, authController.verifyAndEnable2FA);
 router.post("/2fa/login", authController.login2FA);
-router.post("/refresh", authController.refreshToken);
+router.get("/refresh", authController.refreshToken);
 router.post("/logout", authMiddleware, authController.logout);
 router.get("/verify-email/:token", authController.verifyEmail);
 router.post("/resend-verification", authController.resendVerification);

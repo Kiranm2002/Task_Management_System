@@ -130,6 +130,9 @@ exports.updateTaskDetails = async (taskId, updateData, userId, userRole, newFile
     if (!task) throw new Error("Task not found");
 
     const oldStatus = task.status;
+    const oldPriority = task.priority;
+    const oldAssignee = task.assignedTo ? task.assignedTo.toString() : null;
+
     const newStatus = updateData.status;
 
     const activeStatuses = ["in-progress", "in-review", "completed"];
@@ -164,23 +167,31 @@ exports.updateTaskDetails = async (taskId, updateData, userId, userRole, newFile
     } else {
         if (updateData.title) task.title = updateData.title;
     
-    if (Object.prototype.hasOwnProperty.call(updateData, 'description')) {
-        task.description = updateData.description;
-    }
+        if (Object.prototype.hasOwnProperty.call(updateData, 'description')) {
+            task.description = updateData.description;
+        }
 
-    if (updateData.projectId) task.projectId = updateData.projectId;
-    if (updateData.status) task.status = updateData.status;
-    if (updateData.priority) task.priority = updateData.priority;
-    if (updateData.assignedTo) task.assignedTo = updateData.assignedTo;
-    
-    if (updateData.estimatedHours !== undefined) task.estimatedHours = Number(updateData.estimatedHours);
-    if (updateData.actualHours !== undefined) task.actualHours = Number(updateData.actualHours);
-    
-    if (updateData.dueDate) task.dueDate = updateData.dueDate;
-    if (updateData.startDate) task.startDate = updateData.startDate;
-    if (Object.prototype.hasOwnProperty.call(updateData, 'completedAt')) {
-        task.completedAt = updateData.completedAt;
-    }
+        if (updateData.projectId) task.projectId = updateData.projectId;
+        if (updateData.status) task.status = updateData.status;
+        
+        if (updateData.priority && oldPriority !== updateData.priority) {
+            task.priority = updateData.priority;
+            await collabService.logActivity(taskId, userId, "PRIORITY_CHANGE", oldPriority, updateData.priority);
+        }
+
+        if (updateData.assignedTo && oldAssignee !== updateData.assignedTo.toString()) {
+            task.assignedTo = updateData.assignedTo;
+            await collabService.logActivity(taskId, userId, "ASSIGNMENT_CHANGE", oldAssignee, updateData.assignedTo);
+        }
+        
+        if (updateData.estimatedHours !== undefined) task.estimatedHours = Number(updateData.estimatedHours);
+        if (updateData.actualHours !== undefined) task.actualHours = Number(updateData.actualHours);
+        
+        if (updateData.dueDate) task.dueDate = updateData.dueDate;
+        if (updateData.startDate) task.startDate = updateData.startDate;
+        if (Object.prototype.hasOwnProperty.call(updateData, 'completedAt')) {
+            task.completedAt = updateData.completedAt;
+        }
     }
 
     if (newFiles && newFiles.length > 0) {
@@ -198,30 +209,32 @@ exports.updateTaskDetails = async (taskId, updateData, userId, userRole, newFile
     await task.save();
 
     if (newStatus && oldStatus !== newStatus) {
-        await collabService.logActivity(taskId, userId, "STATUS_CHANGE", oldStatus, newStatus);
+        const activityAction = newStatus === "completed" ? "TASK_COMPLETED" : "STATUS_CHANGE";
+        await collabService.logActivity(taskId, userId, activityAction, oldStatus, newStatus);
+        
         const recipientId = (userRole === 'admin') ? task.assignedTo : task.createdBy;
         
         if (recipientId && recipientId.toString() !== userId.toString()) {
-        await notificationService.createNotification(
-            recipientId, 
-            userId, 
-            newStatus === "completed" ? "TASK_COMPLETED" : "STATUS_CHANGE", 
-            `Task "${task.title}" moved from ${oldStatus} to ${newStatus}`, 
-            task._id
-        );
-        const recipient = await User.findById(recipientId);
-        if (recipient && recipient.email) {
-            emailService.sendTaskNotificationEmail(
-                recipient.email,
-                `Task Status Updated: ${newStatus}`,
-                `The status of your task has been updated to ${newStatus}.`,
-                task.title
+            await notificationService.createNotification(
+                recipientId, 
+                userId, 
+                newStatus === "completed" ? "TASK_COMPLETED" : "STATUS_CHANGE", 
+                `Task "${task.title}" moved from ${oldStatus} to ${newStatus}`, 
+                task._id
             );
+            const recipient = await User.findById(recipientId);
+            if (recipient && recipient.email) {
+                emailService.sendTaskNotificationEmail(
+                    recipient.email,
+                    `Task Status Updated: ${newStatus}`,
+                    `The status of your task has been updated to ${newStatus}.`,
+                    task.title
+                );
+            }
+            const io = getIO();
+            io.emit("TASK_UPDATED", task);
+            io.emit("TASK_LIST_REFRESH");
         }
-        const io = getIO();
-        io.emit("TASK_UPDATED", task);
-        io.emit("TASK_LIST_REFRESH");
-    }
     }
 
     return task;
