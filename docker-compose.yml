@@ -8,15 +8,14 @@ services:
     env_file: ./backend/.env
     environment:
       - NODE_ENV=production
-      - REDIS_URL=${REDIS_URL} 
-      - MONGO_URI=${MONGO_URI}
-      - FRONTEND_URL=${FRONTEND_URL}
+      
 
   frontend:
-    build: ./frontend
+    build: 
+      context: ./frontend
+      args:
+        - VITE_API_URL=http://localhost:5000/api
     ports:
       - "5173:80" 
-    environment:
-      - VITE_APP_BACKEND_URL=${VITE_APP_BACKEND_URL}
     depends_on:
       - backend
