@@ -47,9 +47,42 @@ const delCache = async (key) => {
   }
 };
 
+const pushToQueue = async (queueName, data) => {
+  try {
+    await redisClient.rpush(queueName, JSON.stringify(data));
+  } catch (error) {
+    console.error("Queue Push Error:", error.message);
+  }
+};
+
+const setHash = async (key, field, value) => {
+  try {
+    await redisClient.hset(key, field, JSON.stringify(value));
+  } catch (error) {
+    console.error("Hash Set Error:", error.message);
+  }
+};
+
+const clearPattern = async (pattern) => {
+  try {
+    let cursor = '0';
+    do {
+      const reply = await redisClient.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+      cursor = reply[0];
+      const keys = reply[1];
+      if (keys.length > 0) {
+        await redisClient.del(...keys);
+      }
+    } while (cursor !== '0');
+  } catch (error) {
+    console.error("Pattern Clear Error:", error.message);
+  }
+};
+
+
 module.exports = {
   setCache,
   getCache,
   clearAllTasksCache,
-  delCache
+  delCache, pushToQueue, setHash, clearPattern
 };

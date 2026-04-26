@@ -17,3 +17,4 @@ const worker = new Worker("notificationQueue", async (job) => {
 }, { connection: redisClient });
 
 worker.on("completed", (job) => console.log(`[Worker] Job ${job.id} - Email Sent Successfully`));
+

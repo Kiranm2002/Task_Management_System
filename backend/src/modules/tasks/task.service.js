@@ -7,7 +7,6 @@ const {getIO} = require("../../config/socket")
 const emailService = require("../../shared/services/email.service");
 const User = require("../../shared/models/user.model");
 
-
 exports.createTask = async (taskData, files, userId) => {
     let attachments = [];
     if (files && files.length > 0) {
@@ -92,6 +91,7 @@ exports.createTask = async (taskData, files, userId) => {
             );
         }
     }
+    
     return task;
 };
 
