@@ -1,19 +1,53 @@
-import { Grid, Typography, Box, Paper, List, ListItem, ListItemText, ListItemIcon, LinearProgress, Chip } from '@mui/material';
+import { Grid, Typography, Box, Paper, List, ListItem, ListItemText, 
+  ListItemIcon, LinearProgress, Chip, Button, Tooltip } from '@mui/material';
 import { Schedule, CheckCircleOutlined, ErrorOutlined, Speed, ArrowForwardIos } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import StatsCard from '../features/dashboard/components/StatsCard';
 import { useGetUserStatsQuery } from '../features/analytics/analyticsApi'; 
 import { useGetUpcomingTasksQuery } from '../features/tasks/taskApi';
+import React, { useEffect, useState } from 'react';
+import { subscribeToNotifications } from '../utils/pushSubscription';
+import { useSelector } from 'react-redux';
+import { selectCurrentToken } from '../features/auth/authSlice';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 
 const UserDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [showNotifyBtn, setShowNotifyBtn] = useState(Notification.permission !== 'granted');
   const { data: response, isLoading: statsLoading } = useGetUserStatsQuery();
   const stats = response?.data;
   const { data: tasks, isLoading: tasksLoading } = useGetUpcomingTasksQuery();
 
+  // const token = useSelector(selectCurrentToken);
+  // const authState = useSelector((state) => state.auth);
+  // const user = authState?.user;
+  const { user, token } = useSelector((state) => state.auth);
+  
+  useEffect(() => {
+    if (user?.id && token && Notification.permission === 'granted') {
+      subscribeToNotifications(user.id, token);
+    } 
+  }, [user?.id, token]);
+
   const isBaseDashboard = location.pathname === '/user-dashboard' || location.pathname === '/user-dashboard/';
 
+  const handleSubscription = async () => {
+    console.log("Current User Object:", user);
+    console.log("Current Token:", token);
+
+    const userId = user?.id || user?._id;
+    if (!userId || !token) {
+      console.error("Missing User ID or Token");
+      return;
+    }
+    try {
+      await subscribeToNotifications(user.id, token);
+      setShowNotifyBtn(false);
+    } catch (err) {
+      console.error("Subscription failed", err);
+    }
+  };
   
   if (!isBaseDashboard) {
     return <Outlet />;
@@ -21,13 +55,40 @@ const UserDashboard = () => {
 
   return (
     <Box>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" fontWeight={800}>
-          My Workspace
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Manage your daily objectives and track your productivity.
-        </Typography>
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Typography variant="h4" fontWeight={800}>
+              My Workspace
+            </Typography>
+            {showNotifyBtn && (
+              <Tooltip title="Click to enable browser notifications">
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<NotificationsActiveIcon />}
+                  onClick={handleSubscription}
+                  sx={{
+                    borderRadius: '12px',
+                    textTransform: 'none',
+                    fontSize: '0.75rem',
+                    py: 0.5,
+                    px: 1.5,
+                    fontWeight: 600,
+                    borderWidth: '1.5px',
+                    '&:hover': { borderWidth: '1.5px' }
+                  }}
+                >
+                  Enable Notifications
+                </Button>
+              </Tooltip>
+            )}
+          </Box>
+          <Typography variant="body1" color="text.secondary">
+            Manage your daily objectives and track your productivity.
+          </Typography>
+        </Box>
       </Box>
 
       <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -79,6 +140,7 @@ const UserDashboard = () => {
                 sx={{ cursor: 'pointer', borderRadius: 2 }}
                 color="primary"
                 variant="outlined"
+                renderDeleteIcon
               />
             </Box>
 

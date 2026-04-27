@@ -36,7 +36,6 @@ const App = () => {
               <Route path="/user-dashboard" element={<UserDashboard/>} >
                 <Route path="kanban" element={<UserKanban/>} />
                 <Route path="my-projects" element={<MyProjects/>} />
-                <Route path="settings" element={<div>User Profile</div>} />
               </Route>
               
             </Route>

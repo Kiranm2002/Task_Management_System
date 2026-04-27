@@ -1,5 +1,7 @@
 const notificationService = require("./notification.service");
 const Notification = require("../../shared/models/notification.model")
+const PushSubscription = require("../../shared/models/pushSubscription.model");
+
 exports.getMyNotifications = async (req, res) => {
     try {
         const teamIds = req.user.teams || [];
@@ -31,4 +33,20 @@ exports.markAllRead = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: "Failed to update notifications",error:error.message });
     }
+};
+
+exports.subscribePush = async (req, res) => {
+  try {
+    const { subscription } = req.body;
+    
+    await PushSubscription.findOneAndUpdate(
+      { "subscription.endpoint": subscription.endpoint },
+      { user: req.user.id, subscription },
+      { upsert: true, new: true }
+    );
+
+    res.status(201).json({ message: "Push subscription successful" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to subscribe to push", error: error.message });
+  }
 };
