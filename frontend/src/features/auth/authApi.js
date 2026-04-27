@@ -64,6 +64,26 @@ export const authApi = apiSlice.injectEndpoints({
         body: { password },
     }),
     }),
+    setup2FA: builder.mutation({
+      query: () => ({
+        url: "/auth/2fa/setup",
+        method: "POST",
+      }),
+    }),
+    verifyAndEnable2FA: builder.mutation({
+      query: (token) => ({
+        url: "/auth/2fa/verify-enable",
+        method: "POST",
+        body: { token },
+      }),
+    }),
+    login2FA: builder.mutation({
+      query: (data) => ({
+        url: "/auth/2fa/login",
+        method: "POST",
+        body: data, 
+      }),
+    }),
   }),
 });
 
@@ -75,5 +95,8 @@ export const {
   useLogoutMutation,
   useForgotPasswordMutation,
   useResetPasswordMutation,
-  useVerifyEmailQuery
+  useVerifyEmailQuery,
+  useSetup2FAMutation,
+  useVerifyAndEnable2FAMutation,
+  useLogin2FAMutation
 } = authApi;

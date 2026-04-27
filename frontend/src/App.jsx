@@ -17,12 +17,14 @@ import Users from "./features/users/components/Users"
 import AdminAnalytics from './pages/AdminAnalytics';
 import UserKanban from './pages/UserKanban';
 import MyProjects from './features/users/components/MyProjects';
+import Login2FA from './features/auth/components/Login2FA';
 
 const App = () => {
   return (
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/login-2fa" element={<Login2FA />} />
         <Route path="/register" element={<Register />} />
         <Route path="/verify-email/:token" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />

@@ -24,6 +24,9 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
   let result = await baseQuery(args, api, extraOptions);
 
   if (result.error && result.error.status === 401) {
+    const isAuthEndpoint = args.url?.includes('/auth/login') || args.url?.includes('/auth/verify-2fa');
+    
+    if (isAuthEndpoint) return result;
     if (!mutex.isLocked()) {
       const release = await mutex.acquire();
       

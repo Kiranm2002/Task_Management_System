@@ -37,6 +37,12 @@ const Login = () => {
 
     try {
       const userData = await login(form).unwrap();
+      
+      if (userData.require2FA) {
+      dispatch(setCredentials({ require2FA: true, userId: userData.userId }));
+      navigate('/login-2fa'); 
+      return;
+    }
       dispatch(setCredentials({ ...userData }));
       
       const role = userData.user.role;

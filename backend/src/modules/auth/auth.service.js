@@ -42,6 +42,7 @@ exports.registerUser = async (userData) => {
     return { user, accessToken, refreshToken };
 };
 
+
 exports.loginUser = async (email, password) => {
     const user = await User.findOne({ email }).select("+password");
     if (!user) throw new Error("Invalid credentials");
@@ -66,7 +67,17 @@ exports.loginUser = async (email, password) => {
 
     await setCache(`refreshToken:${user._id}`, refreshToken, CACHE_EXPIRY);
 
-    return { user, accessToken, refreshToken };
+    return { 
+        user: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            twoFactorEnabled: user.twoFactorEnabled 
+        }, 
+        accessToken, 
+        refreshToken 
+    };
 };
 
 exports.verifyEmailToken = async (token) => {
@@ -175,16 +186,22 @@ exports.setup2FA = async (userId) => {
 };
 
 exports.activate2FA = async (userId, token) => {
-    const user = await User.findById(userId);
+
+    const user = await User.findById(userId).select("+twoFactorSecret");
+
+    if (!user || !user.twoFactorSecret) {
+        throw new Error("2FA Setup was not initialized correctly.");
+    }
 
     const verified = speakeasy.totp.verify({
         secret: user.twoFactorSecret,
         encoding: 'base32',
-        token: token
+        token: token,
+        window:1
     });
 
     if (verified) {
-        user.isTwoFactorEnabled = true;
+        user.twoFactorEnabled = true;
         await user.save();
     }
     
@@ -193,15 +210,24 @@ exports.activate2FA = async (userId, token) => {
 
 exports.verify2FALogin = async (userId, token) => {
     const User = require("../../shared/models/user.model"); 
-    const user = await User.findById(userId);
-    
-    if (!user) throw new Error("User not found");
+
+    const user = await User.findById(userId).select("+twoFactorSecret"); 
+
+    if (!user) {
+        throw new Error("User not found");
+    }
+
+    if (!user.twoFactorSecret) {
+        throw new Error("2FA not set up for this user");
+    }
 
     const verified = speakeasy.totp.verify({
         secret: user.twoFactorSecret,
         encoding: 'base32',
-        token: token
+        token: token,
+        window:1
     });
+
 
     if (!verified) throw new Error("Invalid 2FA code");
 
@@ -210,7 +236,13 @@ exports.verify2FALogin = async (userId, token) => {
 
     await setCache(`refreshToken:${user._id}`, refreshToken, CACHE_EXPIRY);
 
-    return { user, accessToken, refreshToken };
+    return { user: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            twoFactorEnabled: user.twoFactorEnabled
+        }, accessToken, refreshToken };
 };
 
 exports.logoutUser = async (userId) => {
